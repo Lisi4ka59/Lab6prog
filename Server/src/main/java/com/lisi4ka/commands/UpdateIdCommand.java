@@ -21,30 +21,30 @@ public class UpdateIdCommand implements Command{
         for (City city:collection) {
             if (city.getId()==id){
                 city.setName(args[1]);
-                double x = Double.valueOf(args[2]);
-                float y = Float.valueOf(args[3]);
+                double x = Double.parseDouble(args[2]);
+                float y = Float.parseFloat(args[3]);
                 city.setCoordinates(new Coordinates(x, y));
-                city.setArea(Double.valueOf(args[4]));
+                city.setArea(Double.parseDouble(args[4]));
                 city.setPopulation(Long.valueOf(args[5]));
-                city.setMetersAboveSeaLevel(Integer.valueOf(args[6]));
-                city.setClimate(Climate.fromInt(Integer.valueOf(args[7])));
+                city.setMetersAboveSeaLevel(Integer.parseInt(args[6]));
+                city.setClimate(Climate.fromInt(Integer.parseInt(args[7])));
                 if ("null".equals(args[8])){
                     city.setGovernment(null);
                 }
                 else {
-                    city.setGovernment(Government.fromInt(Integer.valueOf(args[8])));
+                    city.setGovernment(Government.fromInt(Integer.parseInt(args[8])));
                 }
                 if ("null".equals(args[9])){
                     city.setStandardOfLiving(null);
                 }
                 else {
-                    city.setStandardOfLiving(StandardOfLiving.fromInt(Integer.valueOf(args[9])));
+                    city.setStandardOfLiving(StandardOfLiving.fromInt(Integer.parseInt(args[9])));
                 }
                 if ("null".equals(args[10]) || "null".equals(args[11])){
                     city.setGovernor(null);
                 }
                 else {
-                    long age = Long.valueOf(args[10]);
+                    long age = Long.parseLong(args[10]);
                     Date birthday = checkDate(args[11]);
                     city.setGovernor(new Human(age,birthday));
                 }

@@ -158,11 +158,6 @@ public class Checker {
             }
         } while (true);
     }
-    public static String inputString(String prompt){
-        Scanner scanner = new Scanner(System.in);
-        System.out.print(prompt);
-        return (scanner.nextLine()).trim();
-    }
     public static int inputEnumNumber(String prompt, int maxValue, Boolean isNull){
         Scanner scanner = new Scanner(System.in);
         String testString;

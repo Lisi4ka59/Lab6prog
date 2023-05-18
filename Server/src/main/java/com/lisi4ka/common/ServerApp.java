@@ -1,9 +1,7 @@
 package com.lisi4ka.common;
 
-import com.lisi4ka.utils.CityLinkedList;
-import com.lisi4ka.utils.PackagedCommand;
-import com.lisi4ka.utils.PackagedResponse;
-import com.lisi4ka.utils.ResponseStatus;
+import com.lisi4ka.utils.*;
+import com.lisi4ka.validation.*;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -18,6 +16,25 @@ import java.util.*;
 
 public class ServerApp {
     public static CityLinkedList cities = new CityLinkedList();
+    private CommandMap createCommandMap(){
+        CommandMap commandMap = new CommandMap();
+        commandMap.put("add", new AddValid());
+        commandMap.put("add_if_min", new AddIfMinValid());
+        commandMap.put("clear", new ClearValid());
+        commandMap.put("execute_script", new ExecuteScriptValid());
+        commandMap.put("exit", new ExitValid());
+        commandMap.put("help", new HelpValid());
+        commandMap.put("info", new InfoValid());
+        commandMap.put("print_descending", new PrintDescendingValid());
+        commandMap.put("print_field_ascending_standard_of_living", new PrintFieldAscendingStandardOfLivingValid());
+        commandMap.put("print_unique_standard_of_living", new PrintUniqueStandardOfLivingValid());
+        commandMap.put("remove_by_id", new RemoveByIdValid());
+        commandMap.put("remove_first", new RemoveFirstValid());
+        commandMap.put("remove_head", new RemoveHeadValid());
+        commandMap.put("show", new ShowValid());
+        commandMap.put("update", new UpdateIdValid());
+        return commandMap;
+    }
     private void run(){
         try {
             System.out.println("Server started");
@@ -43,7 +60,14 @@ public class ServerApp {
                     SocketChannel sc = serverSocketChannel.accept();
                     sc.configureBlocking(false);
                     sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                    System.out.println("Connection Accepted: " + sc.getLocalAddress());
+                    System.out.println("Connection Accepted: " + sc.getRemoteAddress());
+                    ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
+                    ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
+                    PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
+                    serializeObject.writeObject(packagedResponse);
+                    String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
+                    ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
+                    sc.write(byteBuffer);
                 }
                 if (key.isValid() && key.isReadable()) {
                     SocketChannel sc = (SocketChannel) key.channel();
@@ -52,9 +76,9 @@ public class ServerApp {
                     try {
                         sc.read(bb);
                     } catch (SocketException | EOFException ex) {
+                        System.out.printf("Client %s close connection!\nServer will keep running\nTry running client again to re-establish connection\n", sc.getRemoteAddress().toString());
                         sc.close();
                         flag = false;
-                        System.out.print("Client close connection!\nServer will keep running\nTry running another client to re-establish connection\n");
                     }
                     if (flag) {
                         String result = new String(bb.array()).trim();
@@ -83,7 +107,9 @@ public class ServerApp {
                     ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
                     PackagedResponse packagedResponse = new PackagedResponse(answer, ResponseStatus.OK);
                     serializeObject.writeObject(packagedResponse);
-                    socketChannel.write(ByteBuffer.wrap(answer.getBytes()));
+                    String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
+                    ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
+                    socketChannel.write(byteBuffer);
                 }
                     iterator.remove();
                 }

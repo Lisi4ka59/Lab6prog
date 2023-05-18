@@ -199,9 +199,6 @@ public class City implements Jsonable, Comparable<City> {
     public void setGovernor (Human governor){
         this.governor = governor;
     }
-    public void setJsonGovernor(long age, Date birthday){
-        this.governor = new Human(age, birthday);
-    }
 
     public Human getGovernor (){
         return governor;

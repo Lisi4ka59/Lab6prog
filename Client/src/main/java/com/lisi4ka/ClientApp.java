@@ -1,7 +1,8 @@
 package com.lisi4ka;
 
-import com.lisi4ka.utils.CityLinkedList;
+import com.lisi4ka.utils.CommandMap;
 import com.lisi4ka.utils.PackagedCommand;
+import com.lisi4ka.utils.PackagedResponse;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -18,10 +19,11 @@ import static java.lang.Thread.sleep;
 
 
 public class ClientApp {
-    public static CityLinkedList cities = new CityLinkedList();
     static long timeOut = currentTimeMillis();
     static boolean serverWork = true;
     static Queue<ByteBuffer> queue = new LinkedList<>();
+    public static CommandMap commandMap = null;
+    static boolean connectionAccepted = true;
     private void run() {
         try {
             while (true) {
@@ -54,6 +56,7 @@ public class ClientApp {
                 }
                 sc.close();
                 System.out.println("Lost server connection. Repeat connecting in 10 seconds");
+                connectionAccepted = true;
                 sleep(10000);
                 timeOut = currentTimeMillis();
             }
@@ -76,13 +79,14 @@ public class ClientApp {
                 boolean connected = false;
                 try {
                     connected = processConnect(key);
-                    System.out.println("Connection Accepted");
                 } catch (Exception e) {
                     System.out.println("Lost server connection");
                 }
-
                 if (!connected) {
                     return false;
+                }
+                if (connectionAccepted) {
+                    System.out.println("Connection Accepted");
                 }
             }
             if (key.isReadable()) {
@@ -94,7 +98,20 @@ public class ClientApp {
                     serverWork = false;
                     return false;
                 }
-                System.out.println(new String(bb.array()).trim());
+                String result = new String(bb.array()).trim();
+                byte[] data = Base64.getDecoder().decode(result);
+                PackagedResponse packagedResponse = null;
+                try {
+                    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+                    packagedResponse = (PackagedResponse) ois.readObject();
+                    ois.close();
+                } catch (EOFException ignored) {}
+                assert packagedResponse != null;
+                if (packagedResponse.getMessage() != null) {
+                    System.out.println(packagedResponse.getMessage());
+                } else {
+                    commandMap = packagedResponse.getCommandMap();
+                }
             }
             if (key.isWritable() && timeOut < (currentTimeMillis() - 300)) {
                 SocketChannel socketChannel = (SocketChannel) key.channel();
@@ -117,6 +134,7 @@ public class ClientApp {
                         timeOut = currentTimeMillis();
                     } catch (Exception e) {
                         System.out.println("Error while sending message!");
+                        connectionAccepted = false;
                     }
                 }
                 return false;

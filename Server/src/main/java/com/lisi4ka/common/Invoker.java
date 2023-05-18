@@ -1,6 +1,7 @@
 package com.lisi4ka.common;
 
 import com.lisi4ka.commands.*;
+import com.lisi4ka.models.City;
 import com.lisi4ka.utils.PackagedCommand;
 
 import java.util.HashMap;
@@ -9,7 +10,7 @@ import java.util.List;
 public class Invoker {
 
     public HashMap<String, Command> commands = new HashMap<>();
-    public Invoker (List collection) {
+    public Invoker (List<City> collection) {
         commands.put("help", new HelpCommand());
         commands.put("add", new AddCommand(collection));
         commands.put("info", new InfoCommand(collection));

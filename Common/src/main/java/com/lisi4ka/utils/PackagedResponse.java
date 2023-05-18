@@ -3,20 +3,21 @@ package com.lisi4ka.utils;
 import java.io.Serializable;
 
 public class PackagedResponse implements Serializable {
-    private String message;
+    private final String message;
+    private CommandMap commandMap = null;
     public PackagedResponse(String message, ResponseStatus status){
         this.message = message;
         this.status = status;
     }
-
-    public void setMessage(String message) {
-        this.message = message;
+    public PackagedResponse(CommandMap commandMap){
+        this.message = null;
+        this.status = ResponseStatus.OK;
+        this.commandMap = commandMap;
     }
-
     public String getMessage() {
         return message;
     }
-
+    public CommandMap getCommandMap(){return commandMap;}
     ResponseStatus status;
 }
 

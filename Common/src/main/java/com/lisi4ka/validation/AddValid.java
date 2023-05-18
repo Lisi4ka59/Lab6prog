@@ -4,12 +4,13 @@ import com.lisi4ka.models.Coordinates;
 import com.lisi4ka.models.Human;
 import com.lisi4ka.utils.PackagedCommand;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 
 import static com.lisi4ka.utils.Checker.checkDate;
 import static com.lisi4ka.utils.CityReader.*;
 
-public class AddValid implements Validation {
+public class AddValid implements Validation, Serializable {
     public PackagedCommand[] valid(String[] commandText) {
         if (commandText.length == 1 || commandText.length == 2) {
             if (commandText.length == 1) {

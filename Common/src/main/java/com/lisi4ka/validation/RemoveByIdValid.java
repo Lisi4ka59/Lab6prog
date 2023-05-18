@@ -2,9 +2,11 @@ package com.lisi4ka.validation;
 
 import com.lisi4ka.utils.PackagedCommand;
 
+import java.io.Serializable;
+
 import static com.lisi4ka.utils.Checker.inputLong;
 
-public class RemoveByIdValid implements Validation{
+public class RemoveByIdValid implements Validation, Serializable {
     public PackagedCommand[] valid(String[] commandText){
         if (commandText.length == 1){
             long id = inputLong("Input city ID: ");

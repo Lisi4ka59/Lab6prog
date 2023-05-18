@@ -52,7 +52,7 @@ public class AddCommand implements Command {
         else {
             standardOfLiving = StandardOfLiving.fromInt(Integer.parseInt(cityArgs[8]));
         }
-        long age = 0;
+        long age;
         Human governor;
         if ("null".equals(cityArgs[9]) || "null".equals(cityArgs[10])){
             governor = null;

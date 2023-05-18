@@ -2,14 +2,11 @@ package com.lisi4ka.validation;
 
 import com.lisi4ka.utils.PackagedCommand;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class ExecuteScriptValid implements Validation{
+public class ExecuteScriptValid implements Validation, Serializable {
     public static final int addLines = 12;
     ArrayList<String> exeRecursion = new ArrayList<>();
 
