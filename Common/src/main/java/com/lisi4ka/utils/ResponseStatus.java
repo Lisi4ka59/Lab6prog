@@ -2,5 +2,8 @@ package com.lisi4ka.utils;
 
 public enum ResponseStatus {
     OK,
-    Error
+    Error,
+    CommandMap,
+    CommandAnswer,
+    BigCommand
 }

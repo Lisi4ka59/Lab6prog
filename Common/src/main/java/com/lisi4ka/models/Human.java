@@ -37,6 +37,6 @@ public record Human(long age, java.util.Date birthday) implements Jsonable {
 
     @Override
     public String toString() {
-        return String.format("Age = %d, birthday = %s\n", age(), getStringBirthday());
+        return String.format("Age = %d, birthday = %s", age(), getStringBirthday());
     }
 }

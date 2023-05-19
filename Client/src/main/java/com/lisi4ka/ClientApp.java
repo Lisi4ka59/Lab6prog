@@ -3,6 +3,7 @@ package com.lisi4ka;
 import com.lisi4ka.utils.CommandMap;
 import com.lisi4ka.utils.PackagedCommand;
 import com.lisi4ka.utils.PackagedResponse;
+import com.lisi4ka.utils.ResponseStatus;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -14,6 +15,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 
+import static com.lisi4ka.utils.CommandMap.byteBufferLimit;
 import static java.lang.System.currentTimeMillis;
 import static java.lang.Thread.sleep;
 
@@ -29,7 +31,7 @@ public class ClientApp {
             while (true) {
                 boolean doneStatus = true;
                 serverWork = true;
-                InetSocketAddress addr = new InetSocketAddress(InetAddress.getByName("localhost"), 9856);
+                InetSocketAddress addr = new InetSocketAddress(InetAddress.getByName("localhost"), 9857);
                 Selector selector = Selector.open();
                 SocketChannel sc = SocketChannel.open();
                 sc.configureBlocking(false);
@@ -61,7 +63,9 @@ public class ClientApp {
                 timeOut = currentTimeMillis();
             }
         } catch (Exception ex) {
-            System.out.println("This port is already in use!");
+            ex.printStackTrace(System.out);
+            System.out.println("Client died due to unforeseen circumstances!");
+            System.exit(0);
         }
     }
 
@@ -91,7 +95,7 @@ public class ClientApp {
             }
             if (key.isReadable()) {
                 SocketChannel sc = (SocketChannel) key.channel();
-                ByteBuffer bb = ByteBuffer.allocate(8192);
+                ByteBuffer bb = ByteBuffer.allocate(byteBufferLimit);
                 try {
                     sc.read(bb);
                 } catch (Exception e) {
@@ -102,15 +106,36 @@ public class ClientApp {
                 byte[] data = Base64.getDecoder().decode(result);
                 PackagedResponse packagedResponse = null;
                 try {
-                    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
-                    packagedResponse = (PackagedResponse) ois.readObject();
-                    ois.close();
+                        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+                        packagedResponse = (PackagedResponse) ois.readObject();
+                        ois.close();
                 } catch (EOFException ignored) {}
-                assert packagedResponse != null;
-                if (packagedResponse.getMessage() != null) {
-                    System.out.println(packagedResponse.getMessage());
-                } else {
-                    commandMap = packagedResponse.getCommandMap();
+                if (packagedResponse != null) {
+                    if (packagedResponse.getMessage() != null) {
+                        System.out.println(packagedResponse.getMessage());
+                    } else if (packagedResponse.getCommandMap() != null) {
+                        commandMap = packagedResponse.getCommandMap();
+                    }else if (packagedResponse.status == ResponseStatus.BigCommand){
+                        StringBuilder res = new StringBuilder();
+                        for (int i = 0; i < packagedResponse.getPackageCount(); i++){
+                            ByteBuffer byteBuffer = ByteBuffer.allocate(byteBufferLimit);
+                            try{
+                                sc.read(byteBuffer);
+                                res.append(new String(bb.array()).trim());
+                            }catch (Exception ex){
+                                System.out.println("Message received incorrect!");
+                            }
+                        }
+                        byte[] d = Base64.getDecoder().decode(res.toString());
+                        PackagedResponse bigPackagedResponse = null;
+                        try {
+                            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(d));
+                            bigPackagedResponse = (PackagedResponse) ois.readObject();
+                            ois.close();
+                        } catch (EOFException ignored) {}
+                        assert bigPackagedResponse != null;
+                        System.out.println(bigPackagedResponse.getMessage());
+                    }
                 }
             }
             if (key.isWritable() && timeOut < (currentTimeMillis() - 300)) {

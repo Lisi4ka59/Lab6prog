@@ -14,6 +14,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 
+import static com.lisi4ka.utils.CommandMap.byteBufferLimit;
+
 public class ServerApp {
     public static CityLinkedList cities = new CityLinkedList();
     private CommandMap createCommandMap(){
@@ -45,7 +47,7 @@ public class ServerApp {
             Selector selector = Selector.open();
             ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
             serverSocketChannel.configureBlocking(false);
-            serverSocketChannel.bind(new InetSocketAddress(host, 9856));
+            serverSocketChannel.bind(new InetSocketAddress(host, 9857));
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
             SelectionKey key;
             while (true) {
@@ -71,7 +73,7 @@ public class ServerApp {
                 }
                 if (key.isValid() && key.isReadable()) {
                     SocketChannel sc = (SocketChannel) key.channel();
-                    ByteBuffer bb = ByteBuffer.allocate(8192);
+                    ByteBuffer bb = ByteBuffer.allocate(byteBufferLimit);
                     boolean flag = true;
                     try {
                         sc.read(bb);
@@ -108,8 +110,23 @@ public class ServerApp {
                     PackagedResponse packagedResponse = new PackagedResponse(answer, ResponseStatus.OK);
                     serializeObject.writeObject(packagedResponse);
                     String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                    ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
-                    socketChannel.write(byteBuffer);
+                    int packageCount = serializeCommand.getBytes().length / byteBufferLimit +
+                            serializeCommand.getBytes().length % byteBufferLimit==0?0:1;
+                    PackagedResponse firstPackagedResponse = new PackagedResponse(packageCount, ResponseStatus.BigCommand);
+                    serializeObject.writeObject(firstPackagedResponse);
+                    String firstSerialize = Base64.getEncoder().encodeToString(stringOut.toByteArray());
+                    ByteBuffer byteBuff = ByteBuffer.wrap(firstSerialize.getBytes());
+                    socketChannel.write(byteBuff);
+                    var data = serializeCommand.getBytes();
+                    for (int a=0; a <  data.length; a += byteBufferLimit){
+                        ByteBuffer byteBuffer;
+                        if (a+byteBufferLimit > data.length){
+                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, data.length-1));
+                        } else {
+                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, a + byteBufferLimit));
+                        }
+                        socketChannel.write(byteBuffer);
+                    }
                 }
                     iterator.remove();
                 }
