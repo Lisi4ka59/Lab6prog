@@ -19,7 +19,8 @@ import static com.lisi4ka.utils.Serializer.serialize;
 
 public class ServerApp {
     public static CityLinkedList cities = new CityLinkedList();
-    private CommandMap createCommandMap(){
+
+    private CommandMap createCommandMap() {
         CommandMap commandMap = new CommandMap();
         commandMap.put("add", new AddValid());
         commandMap.put("add_if_min", new AddIfMinValid());
@@ -38,11 +39,13 @@ public class ServerApp {
         commandMap.put("update", new UpdateIdValid());
         return commandMap;
     }
-    private void run(){
+
+    private void run() {
         try {
             System.out.println("Server started");
             Invoker invoker = new Invoker(cities);
             Queue<String> queue = new LinkedList<>();
+            Queue<ByteBuffer> bigCommandsQueue = new LinkedList<>();
             queue.add(invoker.run("load"));
             InetAddress host = InetAddress.getByName("localhost");
             Selector selector = Selector.open();
@@ -58,75 +61,84 @@ public class ServerApp {
                 Iterator<SelectionKey> iterator = selectedKeys.iterator();
                 while (iterator.hasNext()) {
                     key = iterator.next();
-                assert key != null;
-                if (key.isValid() && key.isAcceptable()) {
-                    SocketChannel sc = serverSocketChannel.accept();
-                    sc.configureBlocking(false);
-                    sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                    System.out.println("Connection Accepted: " + sc.getRemoteAddress());
-                    ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
-                    ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
-                    PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
-                    serializeObject.writeObject(packagedResponse);
-                    String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                    ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
-                    sc.write(byteBuffer);
-                }
-                if (key.isValid() && key.isReadable()) {
-                    SocketChannel sc = (SocketChannel) key.channel();
-                    ByteBuffer bb = ByteBuffer.allocate(byteBufferLimit);
-                    boolean flag = true;
-                    try {
-                        sc.read(bb);
-                    } catch (SocketException | EOFException ex) {
-                        System.out.printf("Client %s close connection!\nServer will keep running\nTry running client again to re-establish connection\n", sc.getRemoteAddress().toString());
-                        sc.close();
-                        flag = false;
+                    assert key != null;
+                    if (key.isValid() && key.isAcceptable()) {
+                        SocketChannel sc = serverSocketChannel.accept();
+                        sc.configureBlocking(false);
+                        sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+                        System.out.println("Connection Accepted: " + sc.getRemoteAddress());
+                        ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
+                        ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
+                        PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
+                        serializeObject.writeObject(packagedResponse);
+                        String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
+                        ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
+                        bigCommandsQueue.add(byteBuffer);
                     }
-                    if (flag) {
-                        String result = new String(bb.array()).trim();
-                        byte[] data = Base64.getDecoder().decode(result);
-                        PackagedCommand packagedCommand = null;
+                    if (key.isValid() && key.isReadable()) {
+                        SocketChannel sc = (SocketChannel) key.channel();
+                        ByteBuffer bb = ByteBuffer.allocate(8192);
+                        boolean flag = true;
                         try {
-                            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
-                            packagedCommand = (PackagedCommand) ois.readObject();
-                            ois.close();
-                        } catch (EOFException ignored) {}
-                        String answer;
-                        if (packagedCommand != null) {
-                            if (packagedCommand.getCommandArguments() == null) {
-                                answer = invoker.run(packagedCommand.getCommandName());
-                            } else {
-                                answer = invoker.run(packagedCommand);
+                            sc.read(bb);
+                        } catch (SocketException | EOFException ex) {
+                            System.out.printf("Client %s close connection!\nServer will keep running\nTry running client again to re-establish connection\n", sc.getRemoteAddress().toString());
+                            sc.close();
+                            flag = false;
+                        }
+                        if (flag) {
+                            String result = new String(bb.array()).trim();
+                            byte[] data = Base64.getDecoder().decode(result);
+                            PackagedCommand packagedCommand = null;
+                            try {
+                                ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+                                packagedCommand = (PackagedCommand) ois.readObject();
+                                ois.close();
+                            } catch (EOFException ignored) {
                             }
-                            queue.add(answer);
+                            String answer;
+                            if (packagedCommand != null) {
+                                if (packagedCommand.getCommandArguments() == null) {
+                                    answer = invoker.run(packagedCommand.getCommandName());
+                                } else {
+                                    answer = invoker.run(packagedCommand);
+                                }
+                                queue.add(answer);
+                            }
                         }
                     }
-                }
-                if (key.isValid() && key.isWritable() && !queue.isEmpty()) {
-                    String answer = queue.poll();
-                    SocketChannel socketChannel = (SocketChannel) key.channel();
-                    var data = serialize(answer);
-                    int packageCount = data.length / byteBufferLimit +
-                            data.length % byteBufferLimit==0?0:1;
-                    PackagedResponse firstPackagedResponse = new PackagedResponse(packageCount, ResponseStatus.BigCommand);
-                    var firstData = serialize(firstPackagedResponse);
-                    ByteBuffer byteBuff = ByteBuffer.wrap(firstData);
-                    socketChannel.write(byteBuff);
-//                    for (int a=0; a <= data.length; a += byteBufferLimit){
-//                        ByteBuffer byteBuffer;
-//                        if (a+byteBufferLimit > data.length){
-//                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, data.length-1));
-//                        } else {
-//                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, a + byteBufferLimit));
-//                        }
-//                        socketChannel.write(byteBuffer);
-//                    }
-                }
+                    if (key.isValid() && key.isWritable()) {
+                        if (!bigCommandsQueue.isEmpty()) {
+                            SocketChannel socketChannel = (SocketChannel) key.channel();
+                            socketChannel.write(bigCommandsQueue.poll());
+                        } else if (!queue.isEmpty()) {
+                            String answer = queue.poll();
+                            SocketChannel socketChannel = (SocketChannel) key.channel();
+                            int packageCount = answer.length() / byteBufferLimit +
+                                    ((answer.length() % byteBufferLimit == 0) ? 0 : 1);
+                            int packageNumber = 1;
+                            for (int i = 0; i<packageCount; i++) {
+                                String smallAnswer;
+                                if (answer.length()>byteBufferLimit) {
+                                    smallAnswer = answer.substring(1, byteBufferLimit+1);
+                                    System.out.println("!" + smallAnswer);
+                                    answer = answer.substring(byteBufferLimit);
+                                } else {
+                                    smallAnswer = answer;
+                                    System.out.println("&" + smallAnswer);
+                                }
+                                PackagedResponse packagedResponse = new PackagedResponse(smallAnswer, packageCount, packageNumber, ResponseStatus.BigCommand);
+                                bigCommandsQueue.add(ByteBuffer.wrap(serialize(packagedResponse)));
+                                packageNumber++;
+                            }
+                            socketChannel.write(bigCommandsQueue.poll());
+                        }
+                    }
                     iterator.remove();
                 }
             }
-        }catch (Exception ex){
+        } catch (Exception ex) {
+            ex.printStackTrace(System.out);
             System.out.println("This port is already in use!");
         }
     }

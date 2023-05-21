@@ -6,7 +6,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 
 public class CommandMap extends HashMap<String, Validation> implements Serializable{
-    public static final int byteBufferLimit = 8192;
+    public static final int byteBufferLimit = 2000;
     public CommandMap(){
     }
 }

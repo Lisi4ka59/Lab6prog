@@ -3,17 +3,16 @@ package com.lisi4ka.utils;
 import java.io.Serializable;
 
 public class PackagedResponse implements Serializable {
-    private String message = null;
+    private String message;
     private CommandMap commandMap = null;
     private int packageCount;
     private int packageNumber;
-    public PackagedResponse(String message, ResponseStatus status){
+
+    public PackagedResponse(String message, int packageCount, int packageNumber, ResponseStatus status){
         this.message = message;
-        this.status = status;
-    }
-    public PackagedResponse(int packageCount, ResponseStatus status){
         this.packageCount = packageCount;
         this.status = status;
+        this.packageNumber = packageNumber;
     }
     public PackagedResponse(CommandMap commandMap){
         this.message = null;
@@ -28,6 +27,7 @@ public class PackagedResponse implements Serializable {
     public int getPackageCount() {
         return packageCount;
     }
+    public int getPackageNumber(){return packageNumber;}
     public ResponseStatus status;
 }
 
