@@ -103,6 +103,7 @@ public class ClientApp {
                     return false;
                 }
                 String result = new String(bb.array()).trim();
+                System.out.println(result);
                 byte[] data = Base64.getDecoder().decode(result);
                 PackagedResponse packagedResponse = null;
                 try {
@@ -138,7 +139,7 @@ public class ClientApp {
                     }
                 }
             }
-            if (key.isWritable() && timeOut < (currentTimeMillis() - 300)) {
+            if (key.isWritable() && timeOut < (currentTimeMillis() - 1000)) {
                 SocketChannel socketChannel = (SocketChannel) key.channel();
                 if (queue.isEmpty()) {
                     for (PackagedCommand packagedCommand : ClientValidation.validation()) {

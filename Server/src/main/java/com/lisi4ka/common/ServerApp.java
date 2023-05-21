@@ -15,6 +15,7 @@ import java.nio.channels.SocketChannel;
 import java.util.*;
 
 import static com.lisi4ka.utils.CommandMap.byteBufferLimit;
+import static com.lisi4ka.utils.Serializer.serialize;
 
 public class ServerApp {
     public static CityLinkedList cities = new CityLinkedList();
@@ -105,28 +106,22 @@ public class ServerApp {
                 if (key.isValid() && key.isWritable() && !queue.isEmpty()) {
                     String answer = queue.poll();
                     SocketChannel socketChannel = (SocketChannel) key.channel();
-                    ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
-                    ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
-                    PackagedResponse packagedResponse = new PackagedResponse(answer, ResponseStatus.OK);
-                    serializeObject.writeObject(packagedResponse);
-                    String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                    int packageCount = serializeCommand.getBytes().length / byteBufferLimit +
-                            serializeCommand.getBytes().length % byteBufferLimit==0?0:1;
+                    var data = serialize(answer);
+                    int packageCount = data.length / byteBufferLimit +
+                            data.length % byteBufferLimit==0?0:1;
                     PackagedResponse firstPackagedResponse = new PackagedResponse(packageCount, ResponseStatus.BigCommand);
-                    serializeObject.writeObject(firstPackagedResponse);
-                    String firstSerialize = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                    ByteBuffer byteBuff = ByteBuffer.wrap(firstSerialize.getBytes());
+                    var firstData = serialize(firstPackagedResponse);
+                    ByteBuffer byteBuff = ByteBuffer.wrap(firstData);
                     socketChannel.write(byteBuff);
-                    var data = serializeCommand.getBytes();
-                    for (int a=0; a <  data.length; a += byteBufferLimit){
-                        ByteBuffer byteBuffer;
-                        if (a+byteBufferLimit > data.length){
-                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, data.length-1));
-                        } else {
-                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, a + byteBufferLimit));
-                        }
-                        socketChannel.write(byteBuffer);
-                    }
+//                    for (int a=0; a <= data.length; a += byteBufferLimit){
+//                        ByteBuffer byteBuffer;
+//                        if (a+byteBufferLimit > data.length){
+//                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, data.length-1));
+//                        } else {
+//                            byteBuffer = ByteBuffer.wrap(Arrays.copyOfRange(data, a, a + byteBufferLimit));
+//                        }
+//                        socketChannel.write(byteBuffer);
+//                    }
                 }
                     iterator.remove();
                 }
