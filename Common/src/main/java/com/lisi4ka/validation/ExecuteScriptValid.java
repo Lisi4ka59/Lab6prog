@@ -15,8 +15,8 @@ public class ExecuteScriptValid implements Validation, Serializable {
         if (commandText.length == 2) {
             String fileName = commandText[1];
             if (exeRecursion.contains(fileName)) {
-                System.out.printf("Can not execute script from file %s, because it can be very dangerous as it can cause recursion!\n", fileName);
-                throw new NegativeArraySizeException();
+                exeRecursion.clear();
+                throw new IllegalArgumentException(String.format("Can not execute script from file %s, because it can be very dangerous as it can cause recursion!\n", fileName));
             }
             exeRecursion.add(fileName);
             ArrayList<String> lines = new ArrayList<>();
@@ -32,9 +32,9 @@ public class ExecuteScriptValid implements Validation, Serializable {
                     }
                 }
             } catch (SecurityException e) {
-                System.out.printf("Do not have sufficient rights to execute file %s\n", fileName);
+                throw new IllegalArgumentException(String.format("Do not have sufficient rights to execute file %s\n", fileName));
             } catch (IOException e) {
-                System.out.printf("File \"%s\" does not exist\n", fileName);
+                throw new IllegalArgumentException(String.format("File \"%s\" does not exist\n", fileName));
             }
 
             for (int i = 0; i < lines.size(); i++) {
@@ -57,6 +57,8 @@ public class ExecuteScriptValid implements Validation, Serializable {
                             commandsToRun.add(new PackagedCommand(line[0], lineArgs.toString()));
                         } catch (Exception ex) {
                             System.out.printf("Illegal arguments for command %s!\n", line[0]);
+                            System.out.println(ex.getMessage());
+                            throw new IllegalArgumentException(ex.getMessage());
                         }
                     } else if (line.length == 2 && "update_id".equals(line[0])) {
                         try {
@@ -73,6 +75,8 @@ public class ExecuteScriptValid implements Validation, Serializable {
                             commandsToRun.add(new PackagedCommand(line[0], lineArgs.toString()));
                         } catch (Exception ex) {
                             System.out.printf("Illegal arguments for command %s!\n", line[0]);
+                            System.out.println(ex.getMessage());
+                            throw new IllegalArgumentException(ex.getMessage());
                         }
                     } else if (line.length == 1) {
                         commandsToRun.add(new PackagedCommand(line[0], null));
@@ -80,14 +84,13 @@ public class ExecuteScriptValid implements Validation, Serializable {
                         commandsToRun.add(new PackagedCommand(line[0], line[1]));
                     }
                 } catch (IllegalArgumentException ex) {
-                    System.out.printf("Illegal arguments for command %s!\n", commandText[0]);
+                    throw new IllegalArgumentException(ex.getMessage());
                 }
             }
             exeRecursion.remove(fileName);
             return commandsToRun.toArray(PackagedCommand[]::new);
         } else
             throw new
-
                     IllegalArgumentException("Invalid arguments for command execute_script!\n");
     }
 }

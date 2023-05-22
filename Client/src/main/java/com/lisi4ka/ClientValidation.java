@@ -12,7 +12,7 @@ public class ClientValidation {
     public static PackagedCommand[] validation() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
-            System.out.print("> ");
+            System.out.print("\n> ");
             try {
                 String[] commandText = scanner.nextLine().trim().split(" ");
                 if ("".equals(commandText[0])) {
@@ -23,7 +23,7 @@ public class ClientValidation {
                         Validation valid = commandMap.get(commandText[0]);
                         return valid.valid(commandText);
                     } else{
-                        System.out.println("Unknown command! Type \"help\" to open command list");
+                        System.out.print("Unknown command! Type \"help\" to open command list");
                     }
                 } catch (IllegalArgumentException ex) {
                     System.out.printf(ex.getMessage());

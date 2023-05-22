@@ -27,7 +27,7 @@ public class AddCommand implements Command {
         collection.add(city);
         idRepeat+=1;
         collection.sort(new CityComparator());
-        return "Congratulations! City added to collection\n" + defaultSave(collection);
+        return "\nCongratulations! City added to collection\n" + defaultSave(collection);
     }
     public static City getCityArgs(String args){
         String[] cityArgs = args.split(",");

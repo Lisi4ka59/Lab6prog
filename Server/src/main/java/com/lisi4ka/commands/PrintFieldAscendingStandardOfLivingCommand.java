@@ -8,7 +8,6 @@ import java.util.List;
 public class PrintFieldAscendingStandardOfLivingCommand implements Command{
     private final List<City> collection;
     public PrintFieldAscendingStandardOfLivingCommand(List<City> collection){
-
         this.collection = collection;
     }
 
@@ -20,5 +19,4 @@ public class PrintFieldAscendingStandardOfLivingCommand implements Command{
         }
         return stringBuilder.toString();
     }
-
 }

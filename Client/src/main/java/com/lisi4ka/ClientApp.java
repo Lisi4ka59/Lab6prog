@@ -3,7 +3,6 @@ package com.lisi4ka;
 import com.lisi4ka.utils.CommandMap;
 import com.lisi4ka.utils.PackagedCommand;
 import com.lisi4ka.utils.PackagedResponse;
-import com.lisi4ka.utils.ResponseStatus;
 
 import java.io.*;
 import java.net.ConnectException;
@@ -15,17 +14,16 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 
-import static com.lisi4ka.utils.CommandMap.byteBufferLimit;
-import static java.lang.System.currentTimeMillis;
+import static com.lisi4ka.utils.Serializer.serialize;
 import static java.lang.Thread.sleep;
 
 
 public class ClientApp {
-    static long timeOut = currentTimeMillis() + 600;
     static boolean serverWork = true;
     static Queue<ByteBuffer> queue = new LinkedList<>();
     public static CommandMap commandMap = null;
     static boolean connectionAccepted = true;
+    static boolean writeFlag = true;
     private void run() {
         try {
             while (true) {
@@ -60,7 +58,6 @@ public class ClientApp {
                 System.out.println("Lost server connection. Repeat connecting in 10 seconds");
                 connectionAccepted = true;
                 sleep(10000);
-                timeOut = currentTimeMillis();
             }
         } catch (Exception ex) {
             ex.printStackTrace(System.out);
@@ -78,6 +75,7 @@ public class ClientApp {
                 key = (SelectionKey) iterator.next();
                 iterator.remove();
             }
+            writeFlag = false;
             assert key != null;
             if (key.isConnectable()) {
                 boolean connected = false;
@@ -112,41 +110,28 @@ public class ClientApp {
                 } catch (EOFException ignored) {}
                 if (packagedResponse != null) {
                     if (packagedResponse.getMessage() != null) {
-                        System.out.println(packagedResponse.getMessage());
+                        System.out.print(packagedResponse.getMessage());
+                        if (packagedResponse.getPackageCount() <= packagedResponse.getPackageNumber()){
+                            writeFlag = true;
+                        }
                     } else if (packagedResponse.getCommandMap() != null) {
                         commandMap = packagedResponse.getCommandMap();
-//                    }else {
-//                        StringBuilder res = new StringBuilder();
-//                        do {
-//                            try{
-//                                System.out.println(packagedResponse.getMessage());
-//                            }catch (Exception ex){
-//                                System.out.println("Message received incorrect!");
-//                            }
-//                        } while (packagedResponse.getPackageCount() != packagedResponse.getPackageNumber());
-//                    }
                     }
                 }
             }
-            if (key.isWritable() && timeOut < (currentTimeMillis() - 100)) {
+            if (key.isWritable() && writeFlag && commandMap != null) {
                 SocketChannel socketChannel = (SocketChannel) key.channel();
                 if (queue.isEmpty()) {
                     for (PackagedCommand packagedCommand : ClientValidation.validation()) {
                         if ("exit".equals(packagedCommand.getCommandName())) {
                             return true;
                         }
-                        ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
-                        ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
-                        serializeObject.writeObject(packagedCommand);
-                        String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                        ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
-                        queue.add(byteBuffer);
+                        queue.add(ByteBuffer.wrap(serialize(packagedCommand)));
                     }
                 }
                 if (!queue.isEmpty()) {
                     try {
                         socketChannel.write(queue.poll());
-                        timeOut = currentTimeMillis();
                     } catch (Exception e) {
                         System.out.println("Error while sending message!");
                         connectionAccepted = false;

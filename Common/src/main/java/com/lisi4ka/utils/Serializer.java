@@ -21,4 +21,11 @@ public class Serializer {
         String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
         return serializeCommand.getBytes();
     }
+    public static byte[] serialize(PackagedCommand packagedCommand) throws IOException {
+        ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
+        ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
+        serializeObject.writeObject(packagedCommand);
+        String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
+        return serializeCommand.getBytes();
+    }
 }

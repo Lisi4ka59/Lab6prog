@@ -16,6 +16,7 @@ import java.util.*;
 
 import static com.lisi4ka.utils.CommandMap.byteBufferLimit;
 import static com.lisi4ka.utils.Serializer.serialize;
+import static java.lang.Thread.sleep;
 
 public class ServerApp {
     public static CityLinkedList cities = new CityLinkedList();
@@ -46,7 +47,7 @@ public class ServerApp {
             Invoker invoker = new Invoker(cities);
             Queue<String> queue = new LinkedList<>();
             Queue<ByteBuffer> bigCommandsQueue = new LinkedList<>();
-            queue.add(invoker.run("load"));
+            String firstAnswer = invoker.run("load");
             InetAddress host = InetAddress.getByName("localhost");
             Selector selector = Selector.open();
             ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -67,13 +68,9 @@ public class ServerApp {
                         sc.configureBlocking(false);
                         sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
                         System.out.println("Connection Accepted: " + sc.getRemoteAddress());
-                        ByteArrayOutputStream stringOut = new ByteArrayOutputStream();
-                        ObjectOutputStream serializeObject = new ObjectOutputStream(stringOut);
                         PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
-                        serializeObject.writeObject(packagedResponse);
-                        String serializeCommand = Base64.getEncoder().encodeToString(stringOut.toByteArray());
-                        ByteBuffer byteBuffer = ByteBuffer.wrap(serializeCommand.getBytes());
-                        bigCommandsQueue.add(byteBuffer);
+                        bigCommandsQueue.add(ByteBuffer.wrap(serialize(packagedResponse)));
+                        bigCommandsQueue.add(ByteBuffer.wrap(serialize(firstAnswer, 1, 1)));
                     }
                     if (key.isValid() && key.isReadable()) {
                         SocketChannel sc = (SocketChannel) key.channel();
@@ -94,8 +91,7 @@ public class ServerApp {
                                 ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
                                 packagedCommand = (PackagedCommand) ois.readObject();
                                 ois.close();
-                            } catch (EOFException ignored) {
-                            }
+                            } catch (EOFException ignored) {}
                             String answer;
                             if (packagedCommand != null) {
                                 if (packagedCommand.getCommandArguments() == null) {
@@ -107,10 +103,12 @@ public class ServerApp {
                             }
                         }
                     }
+
                     if (key.isValid() && key.isWritable()) {
                         if (!bigCommandsQueue.isEmpty()) {
-                            SocketChannel socketChannel = (SocketChannel) key.channel();
-                            socketChannel.write(bigCommandsQueue.poll());
+                                SocketChannel socketChannel = (SocketChannel) key.channel();
+                                socketChannel.write(bigCommandsQueue.poll());
+                            sleep(5);
                         } else if (!queue.isEmpty()) {
                             String answer = queue.poll();
                             SocketChannel socketChannel = (SocketChannel) key.channel();
@@ -120,18 +118,17 @@ public class ServerApp {
                             for (int i = 0; i<packageCount; i++) {
                                 String smallAnswer;
                                 if (answer.length()>byteBufferLimit) {
-                                    smallAnswer = answer.substring(1, byteBufferLimit+1);
-                                    System.out.println("!" + smallAnswer);
+                                    smallAnswer = answer.substring(0, byteBufferLimit);
                                     answer = answer.substring(byteBufferLimit);
                                 } else {
                                     smallAnswer = answer;
-                                    System.out.println("&" + smallAnswer);
                                 }
-                                PackagedResponse packagedResponse = new PackagedResponse(smallAnswer, packageCount, packageNumber, ResponseStatus.BigCommand);
+                                var packagedResponse = new PackagedResponse(smallAnswer, packageCount, packageNumber, ResponseStatus.BigCommand);
                                 bigCommandsQueue.add(ByteBuffer.wrap(serialize(packagedResponse)));
                                 packageNumber++;
                             }
                             socketChannel.write(bigCommandsQueue.poll());
+                            sleep(5);
                         }
                     }
                     iterator.remove();

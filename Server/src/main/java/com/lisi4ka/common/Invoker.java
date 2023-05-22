@@ -49,10 +49,10 @@ public class Invoker {
                 return result;
             }
             else {
-                    return String.format("Unknown command \"%s\". Type \"help\" to see list of commands", commandText);
+                    return String.format("\nUnknown command \"%s\". Type \"help\" to see list of commands\n", commandText);
             }
         } catch (Exception e){
-            return String.format("Error while execution command \"%s\"\n", commandText);
+            return String.format("\nError while execution command \"%s\"\n", commandText);
         }
     }
 }
