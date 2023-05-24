@@ -3,6 +3,8 @@ package com.lisi4ka.commands;
 import com.github.cliftonlabs.json_simple.*;
 import com.lisi4ka.models.City;
 import com.lisi4ka.utils.CityComparator;
+
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -22,6 +24,11 @@ public class LoadCommand implements Command {
     private String load() {
         String path = System.getenv("CITIES_PATH");
         try {
+            File file = new File(path);
+            if (!file.exists() || file.isDirectory() || !file.canRead() || !file.canWrite()) {
+                System.out.println("Cities path not found!");
+                System.exit(0);
+            }
             Reader reader = Files.newBufferedReader(Paths.get(path));
             JsonObject jsonObject = (JsonObject) Jsoner.deserialize(reader);
             JsonArray jsonArray = (JsonArray)jsonObject.get("cities");

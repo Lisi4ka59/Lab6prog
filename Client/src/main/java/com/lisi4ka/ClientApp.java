@@ -24,6 +24,7 @@ public class ClientApp {
     public static CommandMap commandMap = null;
     static boolean connectionAccepted = true;
     static boolean writeFlag = true;
+
     private void run() {
         try {
             while (true) {
@@ -77,6 +78,9 @@ public class ClientApp {
             }
             writeFlag = false;
             assert key != null;
+            if (key.isAcceptable()){
+            }
+            else
             if (key.isConnectable()) {
                 boolean connected = false;
                 try {
@@ -84,6 +88,7 @@ public class ClientApp {
                 } catch (Exception e) {
                     System.out.println("Lost server connection");
                 }
+
                 if (!connected) {
                     return false;
                 }
@@ -91,6 +96,7 @@ public class ClientApp {
                     System.out.println("Connection Accepted");
                 }
             }
+
             if (key.isReadable()) {
                 SocketChannel sc = (SocketChannel) key.channel();
                 ByteBuffer bb = ByteBuffer.allocate(8192);
