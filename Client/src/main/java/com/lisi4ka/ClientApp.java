@@ -66,7 +66,6 @@ public class ClientApp {
             System.exit(0);
         }
     }
-
         public static Boolean processReadySet (Set readySet)
             throws Exception {
 
@@ -78,9 +77,6 @@ public class ClientApp {
             }
             writeFlag = false;
             assert key != null;
-            if (key.isAcceptable()){
-            }
-            else
             if (key.isConnectable()) {
                 boolean connected = false;
                 try {
@@ -88,12 +84,8 @@ public class ClientApp {
                 } catch (Exception e) {
                     System.out.println("Lost server connection");
                 }
-
                 if (!connected) {
                     return false;
-                }
-                if (connectionAccepted) {
-                    System.out.println("Connection Accepted");
                 }
             }
 
@@ -117,6 +109,9 @@ public class ClientApp {
                 if (packagedResponse != null) {
                     if (packagedResponse.getMessage() != null) {
                         System.out.print(packagedResponse.getMessage());
+                        if (packagedResponse.getMessage().equals("Connection refused")){
+                            System.exit(0);
+                        }
                         if (packagedResponse.getPackageCount() <= packagedResponse.getPackageNumber()){
                             writeFlag = true;
                         }

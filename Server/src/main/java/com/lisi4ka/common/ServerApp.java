@@ -43,8 +43,10 @@ public class ServerApp {
 
     private void run() {
         try {
+            boolean isAccepted = false;
             System.out.println("Server started");
             Invoker invoker = new Invoker(cities);
+            String firstAnswer = invoker.run("load");
             Queue<String> queue = new LinkedList<>();
             Queue<ByteBuffer> bigCommandsQueue = new LinkedList<>();
             InetAddress host = InetAddress.getByName("localhost");
@@ -69,10 +71,15 @@ public class ServerApp {
                     sc.configureBlocking(false);
                     sc.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
                     System.out.println("Connection Accepted: " + sc.getRemoteAddress());
-                    String firstAnswer = invoker.run("load");
-                    PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
-                    bigCommandsQueue.add(ByteBuffer.wrap(serialize(packagedResponse)));
-                    bigCommandsQueue.add(ByteBuffer.wrap(serialize(firstAnswer, 1, 1)));
+                    if (!isAccepted) {
+                        PackagedResponse packagedResponse = new PackagedResponse(createCommandMap());
+                        bigCommandsQueue.add(ByteBuffer.wrap(serialize(packagedResponse)));
+                        bigCommandsQueue.add(ByteBuffer.wrap(serialize(String.format("Connection accepted!\n%s",firstAnswer), 1,  1)));
+                        isAccepted = true;
+                    }else {
+                        sc.write(ByteBuffer.wrap(serialize("Connection refused", 1, 0)));
+                        sc.close();
+                    }
                 }
                 if (key.isValid() && key.isReadable()) {
                     SocketChannel sc = (SocketChannel) key.channel();
@@ -81,6 +88,7 @@ public class ServerApp {
                     try {
                         sc.read(bb);
                     } catch (SocketException | EOFException ex) {
+                        isAccepted = false;
                         System.out.printf("Client %s close connection!\nServer will keep running\nTry running client again to re-establish connection\n", sc.getRemoteAddress().toString());
                         sc.close();
                         flag = false;
@@ -111,7 +119,7 @@ public class ServerApp {
                     if (!bigCommandsQueue.isEmpty()) {
                         SocketChannel socketChannel = (SocketChannel) key.channel();
                         socketChannel.write(bigCommandsQueue.poll());
-                        sleep(10);
+                        sleep(2);
                     } else if (!queue.isEmpty()) {
                         String answer = queue.poll();
                         SocketChannel socketChannel = (SocketChannel) key.channel();
@@ -131,7 +139,7 @@ public class ServerApp {
                             packageNumber++;
                         }
                         socketChannel.write(bigCommandsQueue.poll());
-                        sleep(10);
+                        sleep(2);
                     }
                 }
             }
